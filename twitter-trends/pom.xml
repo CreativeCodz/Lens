@@ -5,7 +5,7 @@
 	<artifactId>twitter-trends</artifactId>
 	<packaging>jar</packaging>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>twitter-trends Maven Webapp</name>
+	<name>twitter-trends</name>
 	<url>http://maven.apache.org</url>
 	<dependencies>
 		<dependency>
@@ -36,6 +36,16 @@
 			<artifactId>jstl</artifactId>
 			<version>1.2</version>
 		</dependency>
+		<dependency>
+			<groupId>org.twitter4j</groupId>
+			<artifactId>twitter4j-core</artifactId>
+			<version>4.0.4</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.9</version>
+		</dependency>						
 	</dependencies>
 	<build>
 		<finalName>twitter-trends</finalName>
