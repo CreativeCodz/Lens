@@ -7,17 +7,12 @@ import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-@Configuration
-@ComponentScan(basePackages = { "com.trending.*" })
-@PropertySource("classpath:twitter.properties")
-
+@Controller
 public class Twitterhandler {
 	public final Logger log = LoggerFactory.getLogger(Twitterhandler.class);
 	
@@ -28,7 +23,13 @@ public class Twitterhandler {
 	@Value("${ConsumerSecret}")
 	private String consumerSecret;
 	
-	@Bean
+	@RequestMapping("/getTrend")
+	public String getTrendingTweets(@RequestParam(value = "name", required = false, defaultValue = "World") String name, Model model) {
+		String encodedKeys = encodeKeys();
+		System.out.println("***************"+encodedKeys);
+		model.addAttribute("name", name);
+		return "index";
+	}
 	public String encodeKeys(){
 		try {
 			String encodedConsumerKey = URLEncoder.encode(consumerKey, "UTF-8");
@@ -42,16 +43,4 @@ public class Twitterhandler {
 	        return new String();
 	    }
 	}
-	
-	@Bean
-	public static PropertySourcesPlaceholderConfigurer propertyConfigInDev() {
-		return new PropertySourcesPlaceholderConfigurer();
-	}
-
-	public static void main(String[] args) {
-		SpringApplication.run(Twitterhandler.class, args);
-		Twitterhandler th = new Twitterhandler();
-		th.encodeKeys();
-	}
-
 }
