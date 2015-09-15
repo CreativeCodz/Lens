@@ -19,10 +19,19 @@ import org.json.simple.JSONValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 @Controller
 public class Twitterhandler {
@@ -36,17 +45,20 @@ public class Twitterhandler {
 	private String consumerSecret;
 	private String bearerToken;
 	
-	@RequestMapping("/getTrend")
-	public String getTrendingTweets(@RequestParam(value = "name", required = false, defaultValue = "World") String name, Model model) {
+	@RequestMapping(value ="/getTrend", method=RequestMethod.GET, 
+            produces=MediaType.APPLICATION_JSON_VALUE )
+	public @ResponseBody String getTrendingTweets(@RequestParam(value = "name", required = false, defaultValue = "World") String name, Model model) {
 		bearerToken = requestBearerToken("https://api.twitter.com/oauth2/token");
+		JSONArray trends = null;
+		String trend = null;
 		try {
-			fetchTrendingTweets("https://api.twitter.com/1.1/trends/place.json?id=1");
+			trends = fetchTrendingTweets("https://api.twitter.com/1.1/trends/place.json?id=1");
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			trend = gson.toJson(trends);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		model.addAttribute("name", name);
-		return "index";
+		return trend;
 	}
 	public String  requestBearerToken(String endPointUrl) {
 		HttpsURLConnection connection = null;
@@ -112,6 +124,7 @@ public class Twitterhandler {
 		}
 		catch (IOException e) { return new String(); }
 	}
+	
 	public String encodeKeys() {
 		try {
 			String encodedConsumerKey = URLEncoder.encode(consumerKey, "UTF-8");
@@ -125,7 +138,7 @@ public class Twitterhandler {
 
 	}
 	// Fetches the first tweet from a given user's timeline
-	private String fetchTrendingTweets(String endPointUrl) throws IOException {
+	private JSONArray fetchTrendingTweets(String endPointUrl) throws IOException {
 		HttpsURLConnection connection = null;
 					
 		try {
@@ -142,11 +155,9 @@ public class Twitterhandler {
 				
 			// Parse the JSON response into a JSON mapped object to fetch fields from.
 			JSONArray obj = (JSONArray)JSONValue.parse(readResponse(connection));
-				System.out.println("*******************"+obj.toString());
+			log.info("JsonString is "+ obj.toJSONString());
 			if (obj != null) {
-				String tweet = ((JSONObject)obj.get(0)).get("trends").toString();
-
-				return (tweet != null) ? tweet : "";
+				return obj;
 			}
 		}
 		catch (MalformedURLException e) {
