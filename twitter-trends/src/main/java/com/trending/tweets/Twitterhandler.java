@@ -27,11 +27,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 @Controller
 public class Twitterhandler {
@@ -53,8 +50,11 @@ public class Twitterhandler {
 		String trend = null;
 		try {
 			trends = fetchTrendingTweets("https://api.twitter.com/1.1/trends/place.json?id=1");
-			Gson gson = new GsonBuilder().setPrettyPrinting().create();
-			trend = gson.toJson(trends);
+			/*Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			trend = gson.toJson(trends);*/
+		    ObjectMapper mapper = new ObjectMapper();
+		    mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+		    trend = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(trends);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
