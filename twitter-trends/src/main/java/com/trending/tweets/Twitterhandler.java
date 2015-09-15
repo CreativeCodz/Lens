@@ -49,7 +49,7 @@ public class Twitterhandler {
 		JSONArray trends = null;
 		String trend = null;
 		try {
-			trends = fetchTrendingTweets("https://api.twitter.com/1.1/trends/place.json?id=1");
+			trends = fetchTrendingTweets("https://api.twitter.com/1.1/trends/place.json?id=23424977");
 			/*Gson gson = new GsonBuilder().setPrettyPrinting().create();
 			trend = gson.toJson(trends);*/
 		    ObjectMapper mapper = new ObjectMapper();
