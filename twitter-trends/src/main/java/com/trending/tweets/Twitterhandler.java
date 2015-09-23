@@ -56,12 +56,12 @@ public class Twitterhandler {
 
 			twitter4j.JSONObject jsonObject = new twitter4j.JSONObject(trends.get(0).toString());
 			twitter4j.JSONArray trendsArray = jsonObject.getJSONArray("trends");
-			String hashTag = null;
+			String query = null;
 			for (int i = 0; i < trendsArray.length(); i++) {
-				hashTag = trendsArray.getJSONObject(i).getString("name");
-				log.info("HashTag : " + hashTag);
+				query = trendsArray.getJSONObject(i).getString("query");
+				log.info("Query : " + query);
+				searchTweet(query, bearerToken);
 			}
-			searchTweet(hashTag, bearerToken);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -72,12 +72,12 @@ public class Twitterhandler {
 	 * @param hashTag
 	 * @throws IOException 
 	 */
-	private void searchTweet(String hashTag, String bearerToken) throws IOException {
+	private void searchTweet(String query, String bearerToken) throws IOException {
 		
 		HttpsURLConnection connection = null;
 		
 		try {
-			String endPointUrl = "https://api.twitter.com/1.1/search/tweets.json?count=100&result_type=recent&q=%23ScreamQueens";
+			String endPointUrl = "https://api.twitter.com/1.1/search/tweets.json?count=1&result_type=recent&q="+query;
 			log.info(endPointUrl);
 			URL url = new URL(endPointUrl ); 
 			connection = (HttpsURLConnection) url.openConnection();           
@@ -173,7 +173,7 @@ public class Twitterhandler {
 			while((line = br.readLine()) != null) {
 				str.append(line + System.getProperty("line.separator"));
 			}
-			System.out.println("string"+str.toString());
+			//System.out.println("string"+str.toString());
 			return str.toString();
 		}
 		catch (IOException e) { return new String(); }
