@@ -16,6 +16,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +28,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import twitter4j.JSONException;
+import twitter4j.Query;
+import twitter4j.QueryResult;
+import twitter4j.Twitter;
+import twitter4j.TwitterException;
+import twitter4j.TwitterFactory;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -34,7 +42,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class Twitterhandler {
 	public final Logger log = LoggerFactory.getLogger(Twitterhandler.class);
 	
-	//http://www.mkyong.com/spring/spring-propertysources-example/
 	@Value("${ConsumerKey}")
 	private String consumerKey;
 
@@ -42,24 +49,73 @@ public class Twitterhandler {
 	private String consumerSecret;
 	private String bearerToken;
 	
-	@RequestMapping(value ="/getTrend", method=RequestMethod.GET, 
-            produces=MediaType.APPLICATION_JSON_VALUE )
-	public @ResponseBody String getTrendingTweets(@RequestParam(value = "name", required = false, defaultValue = "World") String name, Model model) {
+	@RequestMapping(value ="/getTrend", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE )
+	public @ResponseBody String getTrendingTweets() throws JSONException, ParseException {
 		bearerToken = requestBearerToken("https://api.twitter.com/oauth2/token");
 		JSONArray trends = null;
 		String trend = null;
 		try {
 			trends = fetchTrendingTweets("https://api.twitter.com/1.1/trends/place.json?id=1");
-			/*Gson gson = new GsonBuilder().setPrettyPrinting().create();
-			trend = gson.toJson(trends);*/
-		    ObjectMapper mapper = new ObjectMapper();
-		    mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-		    trend = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(trends);
+			ObjectMapper mapper = new ObjectMapper();
+			mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+			trend = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(trends);
+			log.info("JSONArray :" + trends);
+
+			twitter4j.JSONObject jsonObject = new twitter4j.JSONObject(trends.get(0).toString());
+			twitter4j.JSONArray trendsArray = jsonObject.getJSONArray("trends");
+			String hashTag = null;
+			for (int i = 0; i < trendsArray.length(); i++) {
+				hashTag = trendsArray.getJSONObject(i).getString("name");
+				log.info("HashTag : " + hashTag);
+			}
+			searchTweet(hashTag, bearerToken);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return trend;
 	}
+	 
+	/**
+	 * @param hashTag
+	 * @throws IOException 
+	 */
+	private void searchTweet(String hashTag, String bearerToken) throws IOException {
+		
+		HttpsURLConnection connection = null;
+		
+		try {
+			String endPointUrl = "https://api.twitter.com/1.1/search/tweets.json?count=100&result_type=recent&q=%23ScreamQueens";
+			log.info(endPointUrl);
+			URL url = new URL(endPointUrl ); 
+			connection = (HttpsURLConnection) url.openConnection();           
+			connection.setDoOutput(true);
+			connection.setDoInput(true); 
+			connection.setRequestMethod("GET"); 
+			connection.setRequestProperty("Host", "api.twitter.com");
+			connection.setRequestProperty("User-Agent", "CreativeCodz");
+			connection.setRequestProperty("Authorization", "Bearer " + bearerToken);
+			connection.setUseCaches(false);
+				
+			Object obj = JSONValue.parse(readResponse(connection));
+			
+			log.info("Search hashtag tweet : "+ obj.toString());
+		}
+		catch (MalformedURLException e) {
+			throw new IOException("Invalid endpoint URL specified.", e);
+		}
+		finally {
+			if (connection != null) {
+				connection.disconnect();
+			}
+		}
+		
+		
+	}
+
+	/**
+	 * @param endPointUrl
+	 * @return
+	 */
 	public String  requestBearerToken(String endPointUrl) {
 		HttpsURLConnection connection = null;
 		String encodedCredentials = encodeKeys();
@@ -76,36 +132,41 @@ public class Twitterhandler {
 		connection.setRequestProperty("Content-Length", "29");
 		connection.setUseCaches(false);
 		writeRequest(connection, "grant_type=client_credentials");
-		// Parse the JSON response into a JSON mapped object to fetch fields from.
-				JSONObject obj = (JSONObject)JSONValue.parse(readResponse(connection));
-					System.out.println("**********************"+obj.toString());
-				if (obj != null) {
-					String tokenType = (String)obj.get("token_type");
-					String token = (String)obj.get("access_token");
-				
-					return ((tokenType.equals("bearer")) && (token != null)) ? token : "";
-				}
-			}catch (IOException ioe) {
-				//throw new IOException("Invalid endpoint URL specified.", ioe);
+		JSONObject obj = (JSONObject)JSONValue.parse(readResponse(connection));
+		log.info("Request Bearer Token : " + obj.toJSONString());
+		if (obj != null) {
+			String tokenType = (String)obj.get("token_type");
+			String token = (String)obj.get("access_token");
+
+			return ((tokenType.equals("bearer")) && (token != null)) ? token : "";
+		}
+		}catch (IOException ioe) {
+			//throw new IOException("Invalid endpoint URL specified.", ioe);
+		}
+		finally {
+			if (connection != null) {
+				connection.disconnect();
 			}
-			finally {
-				if (connection != null) {
-					connection.disconnect();
-				}
-			}
+		}
 		return null;
 	}
-	// Writes a request to a connection
+	
+	/**
+	 * @param connection
+	 * @param textBody
+	 * @return
+	 */
 	private boolean writeRequest(HttpsURLConnection connection, String textBody) {
 		try {
 			BufferedWriter wr = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
 			wr.write(textBody);
 			wr.flush();
-			wr.close();
-				
+			wr.close();				
 			return true;
 		}
-		catch (IOException e) { return false; }
+		catch (IOException e) { 
+			return false; 
+		}
 	}
 		
 		
@@ -125,6 +186,9 @@ public class Twitterhandler {
 		catch (IOException e) { return new String(); }
 	}
 	
+	/**
+	 * @return
+	 */
 	public String encodeKeys() {
 		try {
 			String encodedConsumerKey = URLEncoder.encode(consumerKey, "UTF-8");
@@ -137,7 +201,13 @@ public class Twitterhandler {
 		}
 
 	}
+	
 	// Fetches the first tweet from a given user's timeline
+	/**
+	 * @param endPointUrl
+	 * @return
+	 * @throws IOException
+	 */
 	private JSONArray fetchTrendingTweets(String endPointUrl) throws IOException {
 		HttpsURLConnection connection = null;
 					
@@ -155,6 +225,7 @@ public class Twitterhandler {
 				
 			// Parse the JSON response into a JSON mapped object to fetch fields from.
 			JSONArray obj = (JSONArray)JSONValue.parse(readResponse(connection));
+			
 			log.info("JsonString is "+ obj.toJSONString());
 			if (obj != null) {
 				return obj;
